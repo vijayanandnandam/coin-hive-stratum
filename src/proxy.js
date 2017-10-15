@@ -101,14 +101,22 @@ function sendToPool(connection, payload) {
 
 function sendToMiner(connection, payload) {
   const coinHiveMessage = JSON.stringify(payload);
-  if (connection.online) {
-    connection.ws.send(coinHiveMessage);
-    log("\nmessage sent to miner:\n\n", coinHiveMessage);
-  } else {
+  try{
+    if (connection.online) {
+      connection.ws.send(coinHiveMessage);
+      log("\nmessage sent to miner:\n\n", coinHiveMessage);
+    } else {
+      log(
+        "\nfailed to send message to miner cos it was offline:",
+        coinHiveMessage
+      );
+    }
+  } catch(error) {
     log(
-      "\nfailed to send message to miner cos it was offline:",
-      coinHiveMessage
+      "pool connection error",
+      error && error.message ? error.message : error
     );
+    killConnection(connection);
   }
 }
 
@@ -208,9 +216,9 @@ function createProxy(options = defaults) {
     listen: function listen(port = 8892) {
       let wss;
       if (options.path) {
-        wss = new WebSocket.Server({ path: options.path, port: +port });
+        wss = new WebSocket.Server({ path: options.path, port: +port, backlog: 10240 });
       } else {
-        wss = new WebSocket.Server({ port: +port });
+        wss = new WebSocket.Server({ port: +port, backlog: 10240 });
       }
       log("websocket server created");
       log("listening on port", port);
